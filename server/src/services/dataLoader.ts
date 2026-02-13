@@ -18,16 +18,12 @@ export async function createTable(
 
   const sql = `CREATE TABLE IF NOT EXISTS "${tableName}" (id SERIAL PRIMARY KEY, ${columnDefs})`
 
-  const { error } = await supabaseAdmin.rpc('execute_readonly_query', {
+  const { error } = await supabaseAdmin.rpc('execute_sql', {
     query_text: sql,
   })
 
   if (error) {
-    // Fallback: try direct SQL via admin
-    const { error: createError } = await supabaseAdmin.from(tableName).select('*').limit(0)
-    if (createError) {
-      throw new Error(`Failed to create table: ${error.message}`)
-    }
+    throw new Error(`Failed to create table: ${error.message}`)
   }
 }
 
