@@ -164,7 +164,7 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - `server/src/routes/results.ts` — Query history
 
 ### Backend Services
-- `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse()` (conversational: returns `{ message, sql? }`)
+- `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse()` (conversational, business analyst persona: returns `{ message, sql? }` with data-specific insights)
 - `server/src/services/sqlValidator.ts` — SELECT-only validation, dangerous keyword blocking
 - `server/src/services/queryExecutor.ts` — Supabase RPC execution
 - `server/src/services/fileParser.ts` — CSV/JSON/SQL/XLSX parsing
