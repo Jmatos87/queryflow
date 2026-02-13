@@ -219,6 +219,9 @@ export function ChatPanel() {
                       <li>Show me the top 10 rows by revenue</li>
                       <li>What does the {datasets[0].schema[0]?.name} column represent?</li>
                     </ul>
+                    <p className="mt-3 text-xs text-muted-foreground/70">
+                      Tip: When uploading multiple files, use consistent column names and formats for accurate cross-file analysis.
+                    </p>
                   </>
                 ) : (
                   <>
@@ -235,6 +238,9 @@ export function ChatPanel() {
                       <li>Join these datasets on a common column</li>
                       <li>Compare totals across both files</li>
                     </ul>
+                    <p className="mt-3 text-xs text-muted-foreground/70">
+                      Tip: For best results, upload files with consistent column names and formats across datasets.
+                    </p>
                   </>
                 )}
               </div>
