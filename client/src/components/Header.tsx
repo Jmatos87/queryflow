@@ -1,4 +1,4 @@
-import { Menu, Database } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/stores/uiStore'
 
@@ -18,7 +18,7 @@ export function Header() {
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-primary" />
+          <img src="/queryflow-logo.svg" alt="QueryFlow" className="h-8 w-8" />
           <h1 className="text-lg font-semibold">QueryFlow</h1>
         </div>
       </div>
