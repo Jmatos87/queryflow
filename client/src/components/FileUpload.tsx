@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useUpload } from '@/hooks/useUpload'
 
-const ALLOWED_EXTENSIONS = ['.csv', '.json', '.sql']
+const ALLOWED_EXTENSIONS = ['.csv', '.json', '.sql', '.xlsx']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export function FileUpload() {
@@ -87,7 +87,7 @@ export function FileUpload() {
                       Drop your file here, or click to browse
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      CSV, JSON, or SQL files up to 10MB
+                      CSV, JSON, SQL, or Excel files up to 10MB
                     </p>
                   </div>
                 </>
@@ -96,7 +96,7 @@ export function FileUpload() {
             <input
               type="file"
               className="hidden"
-              accept=".csv,.json,.sql"
+              accept=".csv,.json,.sql,.xlsx"
               onChange={handleChange}
               disabled={upload.isPending}
             />

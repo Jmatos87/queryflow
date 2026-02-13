@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
-import { parseCSV, parseJSON, parseSQLDump } from '../services/fileParser.js'
+import { parseCSV, parseJSON, parseSQLDump, parseXLSX } from '../services/fileParser.js'
 import { analyzeSchema } from '../services/schemaAnalyzer.js'
 import { createTable, loadData, generateTableName } from '../services/dataLoader.js'
 import { supabaseAdmin } from '../config/supabase.js'
@@ -17,12 +17,13 @@ const upload = multer({
       'application/sql',
       'text/plain',
       'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/octet-stream',
     ]
     if (allowed.includes(file.mimetype)) {
       cb(null, true)
     } else {
-      cb(new AppError(400, 'Invalid file type. Supported: CSV, JSON, SQL'))
+      cb(new AppError(400, 'Invalid file type. Supported: CSV, JSON, SQL, XLSX'))
     }
   },
 })
@@ -42,27 +43,32 @@ router.post('/', uploadLimiter, upload.single('file'), async (req, res, next) =>
       throw new AppError(400, 'Session ID is required')
     }
 
-    const content = file.buffer.toString('utf-8')
     const ext = file.originalname.split('.').pop()?.toLowerCase()
 
-    let fileType: 'csv' | 'json' | 'sql'
+    let fileType: 'csv' | 'json' | 'sql' | 'xlsx'
     let parsed
 
-    switch (ext) {
-      case 'csv':
-        fileType = 'csv'
-        parsed = parseCSV(content)
-        break
-      case 'json':
-        fileType = 'json'
-        parsed = parseJSON(content)
-        break
-      case 'sql':
-        fileType = 'sql'
-        parsed = parseSQLDump(content)
-        break
-      default:
-        throw new AppError(400, 'Unsupported file extension. Use .csv, .json, or .sql')
+    if (ext === 'xlsx') {
+      fileType = 'xlsx'
+      parsed = parseXLSX(file.buffer)
+    } else {
+      const content = file.buffer.toString('utf-8')
+      switch (ext) {
+        case 'csv':
+          fileType = 'csv'
+          parsed = parseCSV(content)
+          break
+        case 'json':
+          fileType = 'json'
+          parsed = parseJSON(content)
+          break
+        case 'sql':
+          fileType = 'sql'
+          parsed = parseSQLDump(content)
+          break
+        default:
+          throw new AppError(400, 'Unsupported file extension. Use .csv, .json, .sql, or .xlsx')
+      }
     }
 
     const schema = analyzeSchema(parsed)

@@ -1,4 +1,5 @@
 import { parse } from 'csv-parse/sync'
+import * as XLSX from 'xlsx'
 import type { ParsedData } from '../types/index.js'
 
 export function parseCSV(content: string): ParsedData {
@@ -18,6 +19,34 @@ export function parseCSV(content: string): ParsedData {
 
   const columns = Object.keys(records[0])
   return { columns, rows: records }
+}
+
+export function parseXLSX(buffer: Buffer): ParsedData {
+  const workbook = XLSX.read(buffer, { type: 'buffer' })
+  const sheetName = workbook.SheetNames[0]
+
+  if (!sheetName) {
+    throw new Error('Excel file contains no sheets')
+  }
+
+  const sheet = workbook.Sheets[sheetName]
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    defval: null,
+  })
+
+  if (rows.length === 0) {
+    throw new Error('Excel file contains no data rows')
+  }
+
+  const columnSet = new Set<string>()
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      columnSet.add(key)
+    }
+  }
+
+  const columns = Array.from(columnSet)
+  return { columns, rows }
 }
 
 export function parseJSON(content: string): ParsedData {

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS datasets (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   original_filename TEXT NOT NULL,
-  file_type TEXT NOT NULL CHECK (file_type IN ('csv', 'json', 'sql')),
+  file_type TEXT NOT NULL CHECK (file_type IN ('csv', 'json', 'sql', 'xlsx')),
   table_name TEXT NOT NULL UNIQUE,
   schema JSONB NOT NULL,
   row_count INTEGER NOT NULL DEFAULT 0,

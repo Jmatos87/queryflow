@@ -9,7 +9,7 @@ export interface Dataset {
   id: string
   name: string
   original_filename: string
-  file_type: 'csv' | 'json' | 'sql'
+  file_type: 'csv' | 'json' | 'sql' | 'xlsx'
   table_name: string
   schema: ColumnSchema[]
   row_count: number

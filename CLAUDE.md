@@ -1,7 +1,7 @@
 # CLAUDE.md - QueryFlow Development Guide
 
 ## Project Overview
-QueryFlow is a natural language query interface for datasets. Users upload CSV, JSON, or SQL dumps and query them conversationally — no SQL knowledge required. The app translates plain English into SQL, executes it, and returns results with visualizations.
+QueryFlow is a natural language query interface for datasets. Users upload CSV, JSON, SQL dumps, or Excel (XLSX) files and query them conversationally — no SQL knowledge required. The app translates plain English into SQL, executes it, and returns results with visualizations.
 
 ## Tech Stack
 
@@ -114,7 +114,7 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - Input validation and sanitization
 - MCP tool definitions and LLM request formatting
 - SQL generation and validation
-- File parsing (CSV, JSON, SQL dump)
+- File parsing (CSV, JSON, SQL dump, XLSX)
 - Authentication and authorization
 - Rate limiting behavior
 
@@ -134,7 +134,7 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - `client/src/components/ResultsDrawer.tsx` — Right-side Sheet with DataTable + ChartView tabs, triggered from chat "View Results"
 - `client/src/components/DataTable.tsx` — Sortable table component (max 100 rows)
 - `client/src/components/ChartView.tsx` — Auto-detecting chart (Bar/Line/Pie) via Recharts
-- `client/src/components/FileUpload.tsx` — Drag-and-drop file upload (.csv/.json/.sql, 10MB max)
+- `client/src/components/FileUpload.tsx` — Drag-and-drop file upload (.csv/.json/.sql/.xlsx, 10MB max)
 - `client/src/components/QueryPanel.tsx` — Legacy query panel (replaced by ChatPanel)
 - `client/src/components/QueryInput.tsx` — Legacy query input (functionality now in ChatPanel)
 - `client/src/components/ResultsPanel.tsx` — Legacy results display (replaced by ResultsDrawer)
@@ -167,7 +167,7 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse()` (conversational: returns `{ message, sql? }`)
 - `server/src/services/sqlValidator.ts` — SELECT-only validation, dangerous keyword blocking
 - `server/src/services/queryExecutor.ts` — Supabase RPC execution
-- `server/src/services/fileParser.ts` — CSV/JSON/SQL parsing
+- `server/src/services/fileParser.ts` — CSV/JSON/SQL/XLSX parsing
 - `server/src/services/schemaAnalyzer.ts` — Column type inference
 - `server/src/services/dataLoader.ts` — Table creation + batch data loading
 
@@ -206,3 +206,4 @@ Phase 3: Conversation-First Redesign (in progress). Chat-based interface replace
 - Branch naming: `feature/<name>`, `fix/<name>`, `refactor/<name>`
 - Commit messages: concise, imperative tense (e.g., "Add chart visualization component")
 - PR required for main branch
+- **Before every commit, update this CLAUDE.md file** to reflect any changes to the project (new files, updated descriptions, changed phases, etc.)

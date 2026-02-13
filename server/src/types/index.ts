@@ -9,7 +9,7 @@ export interface DatasetMetadata {
   id: string
   name: string
   originalFilename: string
-  fileType: 'csv' | 'json' | 'sql'
+  fileType: 'csv' | 'json' | 'sql' | 'xlsx'
   tableName: string
   schema: ColumnSchema[]
   rowCount: number
