@@ -128,9 +128,10 @@ router.post('/chat', queryLimiter, async (req, res, next) => {
         rowCount = result.rowCount
         executionTimeMs = result.executionTimeMs
       } catch (sqlError) {
-        console.error('[chat] SQL execution failed:', sqlError instanceof Error ? sqlError.message : sqlError)
+        const errorDetail = sqlError instanceof Error ? sqlError.message : String(sqlError)
+        console.error('[chat] SQL execution failed:', errorDetail)
         console.error('[chat] Failed SQL:', chatResponse.sql)
-        chatResponse.message += '\n\n(I tried to run a query but it failed. Could you rephrase your question?)'
+        chatResponse.message += `\n\n(Query failed: ${errorDetail}. Try rephrasing your question or check that column names match exactly.)`
         chatResponse.sql = undefined
       }
     }
