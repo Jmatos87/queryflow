@@ -69,7 +69,7 @@ export function Sidebar() {
           </Button>
         </div>
       </div>
-      <ScrollArea className="max-h-[40%] px-2">
+      <div className="max-h-[40%] overflow-y-auto overflow-x-hidden px-2">
         <div className="space-y-0.5">
           {sessions.map((session) => (
             <SessionItem
@@ -81,7 +81,7 @@ export function Sidebar() {
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       <Separator className="my-2" />
 
