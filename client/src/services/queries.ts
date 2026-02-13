@@ -21,14 +21,13 @@ export function submitQuery(
 }
 
 export function submitChat(
-  datasetId: string,
-  question: string,
   sessionId: string,
+  question: string,
   conversationHistory: { role: 'user' | 'assistant'; content: string }[] = []
 ): Promise<ChatApiResponse> {
   return apiFetch('/query/chat', {
     method: 'POST',
-    body: JSON.stringify({ datasetId, question, sessionId, conversationHistory }),
+    body: JSON.stringify({ sessionId, question, conversationHistory }),
   })
 }
 

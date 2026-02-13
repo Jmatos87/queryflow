@@ -13,7 +13,7 @@ const DANGEROUS_KEYWORDS = [
   'INTO',
 ]
 
-export function validateSQL(sql: string, allowedTable: string): string {
+export function validateSQL(sql: string, allowedTables: string[]): string {
   let cleaned = sql.trim()
 
   // Remove SQL comments
@@ -48,9 +48,10 @@ export function validateSQL(sql: string, allowedTable: string): string {
     throw new Error('Multiple SQL statements are not allowed')
   }
 
-  // Verify the query references the correct table
-  if (!cleaned.includes(allowedTable)) {
-    throw new Error(`Query must reference table "${allowedTable}"`)
+  // Verify the query references at least one of the allowed tables
+  const referencesAllowedTable = allowedTables.some((table) => cleaned.includes(table))
+  if (!referencesAllowedTable) {
+    throw new Error(`Query must reference one of the allowed tables: ${allowedTables.map((t) => `"${t}"`).join(', ')}`)
   }
 
   return cleaned

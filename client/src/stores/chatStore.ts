@@ -2,31 +2,31 @@ import { create } from 'zustand'
 import type { ChatMessage } from '../types'
 
 interface ChatState {
-  /** Messages keyed by dataset ID */
-  messagesByDataset: Record<string, ChatMessage[]>
-  getMessages: (datasetId: string) => ChatMessage[]
-  addMessage: (datasetId: string, message: ChatMessage) => void
-  clearMessages: (datasetId: string) => void
+  /** Messages keyed by session ID */
+  messagesBySession: Record<string, ChatMessage[]>
+  getMessages: (sessionId: string) => ChatMessage[]
+  addMessage: (sessionId: string, message: ChatMessage) => void
+  clearMessages: (sessionId: string) => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  messagesByDataset: {},
-  getMessages: (datasetId) => get().messagesByDataset[datasetId] ?? [],
-  addMessage: (datasetId, message) =>
+  messagesBySession: {},
+  getMessages: (sessionId) => get().messagesBySession[sessionId] ?? [],
+  addMessage: (sessionId, message) =>
     set((state) => ({
-      messagesByDataset: {
-        ...state.messagesByDataset,
-        [datasetId]: [
-          ...(state.messagesByDataset[datasetId] ?? []),
+      messagesBySession: {
+        ...state.messagesBySession,
+        [sessionId]: [
+          ...(state.messagesBySession[sessionId] ?? []),
           message,
         ],
       },
     })),
-  clearMessages: (datasetId) =>
+  clearMessages: (sessionId) =>
     set((state) => ({
-      messagesByDataset: {
-        ...state.messagesByDataset,
-        [datasetId]: [],
+      messagesBySession: {
+        ...state.messagesBySession,
+        [sessionId]: [],
       },
     })),
 }))

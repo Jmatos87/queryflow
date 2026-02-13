@@ -119,7 +119,8 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - Rate limiting behavior
 
 ## Architecture Principles
-- **Conversation-first UX** — primary interface is a persistent chat per dataset; LLM reasons about data AND generates SQL as needed
+- **Multi-file session UX** — a single chat session spans ALL uploaded datasets; users can query individual files or JOIN across them
+- **Session-driven, not dataset-driven** — `sessionId` is the primary key for chat messages, LLM context, and queries; there is no "active dataset" selection
 - **MCP as LLM abstraction** — all LLM communication goes through MCP tool definitions for standardization and extensibility
 - **Supabase as unified backend** — database, file storage, and auth in one service
 - **Session-first privacy** — data is session-only by default, no persistent storage unless opted in
@@ -128,44 +129,41 @@ cd server && npm run test:coverage  # Run tests with coverage report
 ## Key File Inventory
 
 ### Frontend Components
-- `client/src/App.tsx` — Root: QueryClientProvider → AppShell → MainContent (ChatPanel or FileUpload) + ResultsDrawer
+- `client/src/App.tsx` — Root: QueryClientProvider → AppShell → ChatPanel + ResultsDrawer (always shows ChatPanel; no conditional routing)
 - `client/src/components/AppShell.tsx` — Layout: Header + Sidebar + main content
-- `client/src/components/ChatPanel.tsx` — **Main chat interface**: message bubbles, typing indicator, input bar, welcome message
+- `client/src/components/ChatPanel.tsx` — **Main chat interface**: session-aware, shows dataset badges in header, inline "Add Dataset" upload button, welcome message adapts to 0/1/multi datasets, supports cross-file JOINs
 - `client/src/components/ResultsDrawer.tsx` — Right-side Sheet with DataTable + ChartView tabs, triggered from chat "View Results"
 - `client/src/components/DataTable.tsx` — Sortable table component (max 100 rows)
 - `client/src/components/ChartView.tsx` — Auto-detecting chart (Bar/Line/Pie) via Recharts
 - `client/src/components/FileUpload.tsx` — Drag-and-drop file upload (.csv/.json/.sql/.xlsx, 10MB max)
-- `client/src/components/QueryPanel.tsx` — Legacy query panel (replaced by ChatPanel)
-- `client/src/components/QueryInput.tsx` — Legacy query input (functionality now in ChatPanel)
 - `client/src/components/ResultsPanel.tsx` — Legacy results display (replaced by ResultsDrawer)
 
 ### Frontend Stores (Zustand)
-- `client/src/stores/chatStore.ts` — Chat messages per dataset (`messagesByDataset`, `addMessage`, `getMessages`)
-- `client/src/stores/datasetStore.ts` — Active dataset selection
+- `client/src/stores/chatStore.ts` — Chat messages per session (`messagesBySession`, `addMessage`, `getMessages`) — keyed by `sessionId`, not `datasetId`
+- `client/src/stores/datasetStore.ts` — (Deprecated, empty) Active dataset selection removed; all datasets in session are always available
 - `client/src/stores/queryStore.ts` — Legacy query state (lastQuery, isQuerying)
 - `client/src/stores/uiStore.ts` — Sidebar, active tab, drawer open/close + drawerMessage
 
 ### Frontend Hooks
-- `client/src/hooks/useChat.ts` — Sends messages via chat API, manages loading state, adds messages to chatStore
-- `client/src/hooks/useNLQuery.ts` — Legacy: mutation for submitQuery (SQL-only mode)
-- `client/src/hooks/useUpload.ts` — File upload mutation
+- `client/src/hooks/useChat.ts` — Session-based: sends messages via chat API using `sessionId`, manages loading state, adds messages to chatStore
+- `client/src/hooks/useUpload.ts` — File upload mutation (no longer sets active dataset — just invalidates datasets query)
 - `client/src/hooks/useDatasets.ts` — Fetch datasets query
 - `client/src/hooks/useSessionId.ts` — Session UUID from localStorage
 
 ### Frontend Services
 - `client/src/services/api.ts` — Base fetch utility (apiFetch, apiUpload)
-- `client/src/services/queries.ts` — `submitChat()` (conversational) + legacy `submitQuery()` (SQL-only)
+- `client/src/services/queries.ts` — `submitChat(sessionId, question, history)` (session-based, no datasetId) + legacy `submitQuery()` (SQL-only)
 - `client/src/services/datasets.ts` — CRUD for datasets
 
 ### Backend Routes
-- `server/src/routes/query.ts` — `POST /` (legacy SQL-only) + `POST /chat` (conversational with history)
+- `server/src/routes/query.ts` — `POST /` (legacy SQL-only) + `POST /chat` (session-based: fetches ALL datasets for the session, passes multi-table context to LLM)
 - `server/src/routes/upload.ts` — File upload + parse + create table
 - `server/src/routes/datasets.ts` — Dataset CRUD
 - `server/src/routes/results.ts` — Query history
 
 ### Backend Services
-- `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse()` (conversational, business analyst persona: returns `{ message, sql? }` with data-specific insights)
-- `server/src/services/sqlValidator.ts` — SELECT-only validation, dangerous keyword blocking
+- `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse(question, datasets[], history)` (multi-table context, business analyst persona: lists all tables + schemas in prompt, supports cross-file JOINs)
+- `server/src/services/sqlValidator.ts` — SELECT-only validation, dangerous keyword blocking, `validateSQL(sql, allowedTables: string[])` checks at least one allowed table is referenced
 - `server/src/services/queryExecutor.ts` — Supabase RPC execution
 - `server/src/services/fileParser.ts` — CSV/JSON/SQL/XLSX parsing
 - `server/src/services/schemaAnalyzer.ts` — Column type inference
@@ -200,7 +198,16 @@ queryflow/
 ```
 
 ## Current Phase
-Phase 3: Conversation-First Redesign (in progress). Chat-based interface replaces the query panel. LLM can reason about data conversationally and generate SQL on demand. Results display in a right-side drawer.
+Phase 4: Multi-File Chat Sessions (complete). A single chat session spans all uploaded datasets. Users can query individual files or JOIN across them. The LLM receives all table schemas and can generate cross-table SQL. Sidebar shows informational dataset cards (no selection state). `dataset_id` is nullable in `query_history` to support session-wide queries.
+
+### DB Migration Required
+Run in Supabase SQL editor:
+```sql
+ALTER TABLE query_history ALTER COLUMN dataset_id DROP NOT NULL;
+ALTER TABLE query_history DROP CONSTRAINT query_history_dataset_id_fkey;
+ALTER TABLE query_history ADD CONSTRAINT query_history_dataset_id_fkey
+  FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE SET NULL;
+```
 
 ## Git Workflow
 - Branch naming: `feature/<name>`, `fix/<name>`, `refactor/<name>`

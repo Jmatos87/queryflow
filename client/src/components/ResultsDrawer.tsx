@@ -10,7 +10,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { DataTable } from './DataTable'
 import { ChartView } from './ChartView'
 import { ExportButton } from './ExportButton'
@@ -31,7 +30,7 @@ export function ResultsDrawer() {
     <Sheet open={drawerOpen} onOpenChange={(open) => !open && closeDrawer()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 flex flex-col"
+        className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 gap-0 overflow-hidden"
       >
         <SheetHeader className="border-b px-4 py-3">
           <div className="flex items-center justify-between pr-8">
@@ -56,7 +55,7 @@ export function ResultsDrawer() {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
           {drawerMessage?.sql && (
             <details className="px-4 pt-3">
               <summary className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
@@ -72,7 +71,7 @@ export function ResultsDrawer() {
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as 'table' | 'chart')}
-            className="flex-1 flex flex-col overflow-hidden px-4 pt-3"
+            className="flex-1 min-h-0 flex flex-col px-4 pt-3"
           >
             <TabsList className="w-fit">
               <TabsTrigger value="table" className="gap-1.5">
@@ -84,7 +83,7 @@ export function ResultsDrawer() {
                 Chart
               </TabsTrigger>
             </TabsList>
-            <ScrollArea className="flex-1 mt-3 pb-4">
+            <div className="flex-1 min-h-0 overflow-y-auto mt-3 pb-4">
               <TabsContent value="table" className="mt-0">
                 <DataTable data={results} />
               </TabsContent>
@@ -121,7 +120,7 @@ export function ResultsDrawer() {
                 </div>
                 <ChartView data={results} chartType={chartType} />
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
         </div>
       </SheetContent>

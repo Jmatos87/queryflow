@@ -11,8 +11,9 @@ export async function createTable(
   const columnDefs = schema
     .map((col) => {
       const sqlType = toSqlType(col.type)
-      const nullable = col.nullable ? '' : ' NOT NULL'
-      return `"${col.name}" ${sqlType}${nullable}`
+      // Always allow NULLs — schema analysis samples data and can miss nulls
+      // that appear after coercion or in rows beyond the sample window
+      return `"${col.name}" ${sqlType}`
     })
     .join(', ')
 

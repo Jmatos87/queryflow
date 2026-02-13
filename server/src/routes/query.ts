@@ -36,7 +36,7 @@ router.post('/', queryLimiter, async (req, res, next) => {
     }
 
     const sql = await generateSQL(question, dataset.table_name, dataset.schema)
-    const validatedSQL = validateSQL(sql, dataset.table_name)
+    const validatedSQL = validateSQL(sql, [dataset.table_name])
     const result = await executeQuery(validatedSQL)
 
     const { data: queryRecord, error: saveError } = await supabaseAdmin
@@ -72,11 +72,7 @@ router.post('/', queryLimiter, async (req, res, next) => {
 // Conversational chat endpoint
 router.post('/chat', queryLimiter, async (req, res, next) => {
   try {
-    const { datasetId, question, sessionId, conversationHistory } = req.body
-
-    if (!datasetId) {
-      throw new AppError(400, 'Dataset ID is required')
-    }
+    const { question, sessionId, conversationHistory } = req.body
 
     if (!question || !question.trim()) {
       throw new AppError(400, 'Question is required')
@@ -86,22 +82,32 @@ router.post('/chat', queryLimiter, async (req, res, next) => {
       throw new AppError(400, 'Session ID is required')
     }
 
-    const { data: dataset, error: datasetError } = await supabaseAdmin
+    // Fetch ALL datasets for this session
+    const { data: datasets, error: datasetsError } = await supabaseAdmin
       .from('datasets')
       .select('*')
-      .eq('id', datasetId)
-      .single()
+      .eq('session_id', sessionId)
 
-    if (datasetError || !dataset) {
-      throw new AppError(404, 'Dataset not found')
+    if (datasetsError) {
+      throw new AppError(500, 'Failed to fetch datasets')
     }
+
+    if (!datasets || datasets.length === 0) {
+      throw new AppError(404, 'No datasets found for this session')
+    }
+
+    // Build multi-table context for the LLM
+    const datasetInfos = datasets.map((d: Record<string, unknown>) => ({
+      table_name: d.table_name as string,
+      schema: d.schema as import('../types/index.js').ColumnSchema[],
+      row_count: d.row_count as number,
+      name: d.name as string,
+    }))
 
     // Get LLM response with conversation context
     const chatResponse = await generateChatResponse(
       question,
-      dataset.table_name,
-      dataset.schema,
-      dataset.row_count,
+      datasetInfos,
       conversationHistory ?? []
     )
 
@@ -115,7 +121,8 @@ router.post('/chat', queryLimiter, async (req, res, next) => {
     // If the LLM generated SQL, validate and execute it
     if (chatResponse.sql) {
       try {
-        validatedSQL = validateSQL(chatResponse.sql, dataset.table_name)
+        const allowedTables = datasets.map((d: Record<string, unknown>) => d.table_name as string)
+        validatedSQL = validateSQL(chatResponse.sql, allowedTables)
         const result = await executeQuery(validatedSQL)
         results = result.rows
         rowCount = result.rowCount
@@ -133,7 +140,7 @@ router.post('/chat', queryLimiter, async (req, res, next) => {
       const { error: saveError } = await supabaseAdmin
         .from('query_history')
         .insert({
-          dataset_id: datasetId,
+          dataset_id: null,
           natural_language: question,
           generated_sql: validatedSQL,
           result: results,
