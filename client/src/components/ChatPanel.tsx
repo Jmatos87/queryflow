@@ -161,7 +161,7 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
       {/* Dataset header */}
       <div className="flex items-center gap-2 border-b px-4 py-3 flex-wrap">
         {hasDatasets ? (
