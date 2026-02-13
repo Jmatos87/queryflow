@@ -13,6 +13,10 @@ export function deleteDataset(id: string): Promise<{ message: string }> {
   return apiFetch(`/datasets/${id}`, { method: 'DELETE' })
 }
 
+export function deleteSessionDatasets(sessionId: string): Promise<{ message: string }> {
+  return apiFetch(`/datasets/session/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
+}
+
 export function uploadFile(
   file: File,
   sessionId: string

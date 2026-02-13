@@ -52,7 +52,7 @@ BEGIN
 END;
 $$;
 
--- DDL/DML execution function (for CREATE TABLE and INSERT during dataset upload)
+-- DDL/DML execution function (for CREATE TABLE, INSERT, and DROP TABLE during dataset lifecycle)
 CREATE OR REPLACE FUNCTION execute_sql(query_text TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -61,13 +61,15 @@ AS $$
 DECLARE
   upper_trimmed TEXT := UPPER(TRIM(query_text));
 BEGIN
-  -- Allow CREATE TABLE and INSERT INTO ds_ tables only
+  -- Allow CREATE TABLE, INSERT INTO, and DROP TABLE for ds_ tables only
   IF upper_trimmed LIKE 'CREATE TABLE%' THEN
     EXECUTE query_text;
   ELSIF upper_trimmed LIKE 'INSERT INTO%' AND query_text LIKE '%"ds_%' THEN
     EXECUTE query_text;
+  ELSIF upper_trimmed LIKE 'DROP TABLE%' AND query_text LIKE '%"ds_%' THEN
+    EXECUTE query_text;
   ELSE
-    RAISE EXCEPTION 'Only CREATE TABLE and INSERT INTO dataset tables are allowed';
+    RAISE EXCEPTION 'Only CREATE TABLE, INSERT INTO, and DROP TABLE for dataset tables are allowed';
   END IF;
 
   RETURN '{"success": true}'::jsonb;

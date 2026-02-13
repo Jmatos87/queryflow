@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { submitChat } from '../services/queries'
 import { useSessionId } from './useSessionId'
 import { useChatStore } from '../stores/chatStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { useDatasets } from './useDatasets'
 import type { ChatMessage } from '../types'
 
@@ -24,6 +25,13 @@ export function useChat() {
         timestamp: Date.now(),
       }
       addMessage(sessionId, userMessage)
+
+      // Auto-name session from first user message
+      const session = useSessionStore.getState().sessions.find((s) => s.id === sessionId)
+      if (session && session.name === 'New Session') {
+        const name = question.length > 40 ? question.slice(0, 40) + '...' : question
+        useSessionStore.getState().renameSession(sessionId, name)
+      }
 
       setIsLoading(true)
 
