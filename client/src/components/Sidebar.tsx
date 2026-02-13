@@ -139,31 +139,29 @@ function SessionItem({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect() }}
-      className={`group flex w-full items-start gap-2 rounded-md p-2.5 text-left cursor-pointer transition-colors ${
+      className={`group flex w-full items-center gap-2 rounded-md p-2.5 text-left cursor-pointer transition-colors ${
         isActive
           ? 'bg-accent text-accent-foreground'
           : 'hover:bg-muted/50 text-foreground'
       }`}
     >
-      <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">{session.name}</p>
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-muted-foreground truncate flex-1 min-w-0">
-            {formatRelativeTime(session.createdAt)}
-          </p>
-          <button
-            className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            aria-label="Delete session"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          {formatRelativeTime(session.createdAt)}
+        </p>
       </div>
+      <button
+        className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer p-1"
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete()
+        }}
+        aria-label="Delete session"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
