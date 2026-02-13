@@ -61,7 +61,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 cursor-pointer"
             onClick={() => createSession()}
             aria-label="New session"
           >
@@ -153,7 +153,7 @@ function SessionItem({
             {formatRelativeTime(session.createdAt)}
           </p>
           <button
-            className="text-muted-foreground/60 hover:text-destructive transition-colors"
+            className="text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()
@@ -185,7 +185,7 @@ function DatasetItem({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:opacity-100 cursor-pointer"
           onClick={onDelete}
           aria-label="Delete dataset"
         >

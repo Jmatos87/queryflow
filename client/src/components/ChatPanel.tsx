@@ -94,7 +94,7 @@ function InlineFileUploadButton() {
       <Button
         variant="outline"
         size="sm"
-        className="h-7 gap-1 text-xs"
+        className="h-7 gap-1 text-xs cursor-pointer"
         onClick={() => fileInputRef.current?.click()}
         disabled={upload.isPending}
       >
