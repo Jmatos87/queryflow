@@ -1,6 +1,14 @@
 import { apiFetch } from './api'
 import type { QueryResponse, QueryResult } from '../types'
 
+export interface ChatApiResponse {
+  message: string
+  sql?: string
+  results?: Record<string, unknown>[]
+  rowCount?: number
+  executionTimeMs?: number
+}
+
 export function submitQuery(
   datasetId: string,
   question: string,
@@ -9,6 +17,18 @@ export function submitQuery(
   return apiFetch('/query', {
     method: 'POST',
     body: JSON.stringify({ datasetId, question, sessionId }),
+  })
+}
+
+export function submitChat(
+  datasetId: string,
+  question: string,
+  sessionId: string,
+  conversationHistory: { role: 'user' | 'assistant'; content: string }[] = []
+): Promise<ChatApiResponse> {
+  return apiFetch('/query/chat', {
+    method: 'POST',
+    body: JSON.stringify({ datasetId, question, sessionId, conversationHistory }),
   })
 }
 

@@ -2,6 +2,8 @@ import type { ColumnSchema, ParsedData } from '../types/index.js'
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T|\s)\d{2}:\d{2}/
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+// Matches currency/comma-formatted numbers: $1,234.56  -$500  1,000  €50.00 etc.
+const FORMATTED_NUMBER_REGEX = /^[($€£¥-]*[\d,]+\.?\d*[)%]?$/
 
 export function analyzeSchema(data: ParsedData): ColumnSchema[] {
   return data.columns.map((name) => {
@@ -11,7 +13,16 @@ export function analyzeSchema(data: ParsedData): ColumnSchema[] {
     )
     const nullable = nonNullValues.length < values.length
     const type = inferType(nonNullValues)
-    const sample = nonNullValues.slice(0, 5)
+
+    // Store coerced sample values so the LLM sees actual types
+    const sample = nonNullValues.slice(0, 5).map((v) => {
+      if ((type === 'integer' || type === 'real') && typeof v === 'string') {
+        const cleaned = v.replace(/[$€£¥,()%\s]/g, '')
+        const n = Number(cleaned)
+        if (!isNaN(n)) return n
+      }
+      return v
+    })
 
     return { name, type, nullable, sample }
   })
@@ -51,6 +62,20 @@ function inferType(
         realCount++
       }
       continue
+    }
+
+    // Detect currency/comma-formatted numbers like $1,234.56 or 1,000
+    if (FORMATTED_NUMBER_REGEX.test(str)) {
+      const cleaned = str.replace(/[$€£¥,()%]/g, '').trim()
+      const parsed = Number(cleaned)
+      if (!isNaN(parsed)) {
+        if (str.includes('.')) {
+          realCount++
+        } else {
+          intCount++
+        }
+        continue
+      }
     }
   }
 

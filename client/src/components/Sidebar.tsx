@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDatasets, useDeleteDataset } from '@/hooks/useDatasets'
 import { useDatasetStore } from '@/stores/datasetStore'
+import { useChatStore } from '@/stores/chatStore'
 import { useQueryHistory } from '@/hooks/useQueryHistory'
 import type { Dataset } from '@/types'
 
@@ -13,6 +14,7 @@ export function Sidebar() {
   const { data: datasets, isLoading } = useDatasets()
   const activeDataset = useDatasetStore((s) => s.activeDataset)
   const setActiveDataset = useDatasetStore((s) => s.setActiveDataset)
+  const clearMessages = useChatStore((s) => s.clearMessages)
   const deleteMutation = useDeleteDataset()
 
   return (
@@ -38,6 +40,7 @@ export function Sidebar() {
                 onSelect={() => setActiveDataset(dataset)}
                 onDelete={() => {
                   deleteMutation.mutate(dataset.id)
+                  clearMessages(dataset.id)
                   if (activeDataset?.id === dataset.id) {
                     setActiveDataset(null)
                   }
@@ -75,7 +78,7 @@ function DatasetItem({
   return (
     <button
       onClick={onSelect}
-      className={`w-full rounded-md p-3 text-left transition-colors hover:bg-accent ${
+      className={`group w-full rounded-md p-3 text-left transition-colors hover:bg-accent ${
         isActive ? 'bg-accent' : ''
       }`}
     >

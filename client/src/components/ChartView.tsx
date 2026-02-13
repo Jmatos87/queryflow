@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { autoDetectChartConfig, getChartColor } from '@/utils/chartUtils'
+import { formatChartLabel } from '@/utils/formatters'
 import type { ChartType } from '@/utils/chartUtils'
 
 interface ChartViewProps {
@@ -35,7 +36,9 @@ export function ChartView({ data, chartType }: ChartViewProps) {
 
   const type = chartType || config.type
   const chartData = data.map((row) => {
-    const item: Record<string, unknown> = { [config.labelKey]: row[config.labelKey] }
+    const item: Record<string, unknown> = {
+      [config.labelKey]: formatChartLabel(row[config.labelKey]),
+    }
     for (const key of config.valueKeys) {
       item[key] = Number(row[key]) || 0
     }

@@ -33,21 +33,29 @@ export async function loadData(
   schema: ColumnSchema[]
 ): Promise<number> {
   let loaded = 0
+  const columnNames = schema.map((col) => `"${col.name}"`).join(', ')
 
   for (let i = 0; i < data.rows.length; i += BATCH_SIZE) {
     const batch = data.rows.slice(i, i + BATCH_SIZE)
-    const processedBatch = batch.map((row) => {
-      const processed: Record<string, unknown> = {}
-      for (const col of schema) {
-        const val = row[col.name]
-        processed[col.name] = coerceValue(val, col.type)
-      }
-      return processed
-    })
+    const valueClauses: string[] = []
 
-    const { error } = await supabaseAdmin
-      .from(tableName)
-      .insert(processedBatch)
+    for (const row of batch) {
+      const values = schema.map((col) => {
+        const coerced = coerceValue(row[col.name], col.type)
+        if (coerced === null) return 'NULL'
+        if (typeof coerced === 'number') return String(coerced)
+        if (typeof coerced === 'boolean') return coerced ? 'TRUE' : 'FALSE'
+        // Escape single quotes for SQL string literals
+        return `'${String(coerced).replace(/'/g, "''")}'`
+      })
+      valueClauses.push(`(${values.join(', ')})`)
+    }
+
+    const sql = `INSERT INTO "${tableName}" (${columnNames}) VALUES ${valueClauses.join(', ')}`
+
+    const { error } = await supabaseAdmin.rpc('execute_sql', {
+      query_text: sql,
+    })
 
     if (error) {
       throw new Error(`Failed to insert batch at row ${i}: ${error.message}`)
@@ -57,6 +65,14 @@ export async function loadData(
   }
 
   return loaded
+}
+
+/** Strip currency symbols, commas, and parens from a string for numeric parsing */
+function stripNumericFormatting(str: string): string {
+  // Handle accounting-style negatives: ($1,234.56) → -1234.56
+  const isNegative = str.startsWith('(') && str.endsWith(')') || str.startsWith('-')
+  const cleaned = str.replace(/[$€£¥,()%\s]/g, '').replace(/^-/, '')
+  return isNegative ? `-${cleaned}` : cleaned
 }
 
 function coerceValue(
@@ -71,11 +87,13 @@ function coerceValue(
 
   switch (type) {
     case 'integer': {
-      const n = parseInt(str, 10)
+      const cleaned = stripNumericFormatting(str)
+      const n = parseInt(cleaned, 10)
       return isNaN(n) ? null : n
     }
     case 'real': {
-      const n = parseFloat(str)
+      const cleaned = stripNumericFormatting(str)
+      const n = parseFloat(cleaned)
       return isNaN(n) ? null : n
     }
     case 'boolean':

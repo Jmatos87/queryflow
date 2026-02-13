@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { formatCellValue } from '@/utils/formatters'
 
 interface DataTableProps {
   data: Record<string, unknown>[]
@@ -103,7 +104,7 @@ export function DataTable({ data, maxRows = 100 }: DataTableProps) {
                     {row[col] == null ? (
                       <span className="text-muted-foreground italic">null</span>
                     ) : (
-                      String(row[col])
+                      formatCellValue(row[col])
                     )}
                   </TableCell>
                 ))}

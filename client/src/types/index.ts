@@ -37,3 +37,14 @@ export interface QueryResponse {
   rowCount: number
   executionTimeMs: number
 }
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  sql?: string
+  results?: Record<string, unknown>[]
+  rowCount?: number
+  executionTimeMs?: number
+  timestamp: number
+}

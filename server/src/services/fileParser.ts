@@ -2,7 +2,10 @@ import { parse } from 'csv-parse/sync'
 import type { ParsedData } from '../types/index.js'
 
 export function parseCSV(content: string): ParsedData {
-  const records = parse(content, {
+  // Strip BOM (byte order mark) that some CSV editors prepend
+  const cleaned = content.replace(/^\uFEFF/, '')
+
+  const records = parse(cleaned, {
     columns: true,
     skip_empty_lines: true,
     trim: true,

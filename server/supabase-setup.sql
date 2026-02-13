@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS query_history (
 CREATE INDEX idx_query_history_dataset ON query_history(dataset_id);
 CREATE INDEX idx_query_history_session ON query_history(session_id);
 
--- Read-only query execution function
+-- Read-only query execution function (for SELECT queries)
 CREATE OR REPLACE FUNCTION execute_readonly_query(query_text TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -41,16 +41,58 @@ AS $$
 DECLARE
   result JSONB;
 BEGIN
-  -- Ensure it's a SELECT statement
-  IF NOT (UPPER(TRIM(query_text)) LIKE 'SELECT%') AND
-     NOT (UPPER(TRIM(query_text)) LIKE 'CREATE%') THEN
-    RAISE EXCEPTION 'Only SELECT and CREATE statements are allowed';
+  IF NOT (UPPER(TRIM(query_text)) LIKE 'SELECT%') THEN
+    RAISE EXCEPTION 'Only SELECT statements are allowed';
   END IF;
 
   EXECUTE 'SELECT COALESCE(jsonb_agg(row_to_json(t)), ''[]''::jsonb) FROM (' || query_text || ') t'
     INTO result;
 
   RETURN result;
+END;
+$$;
+
+-- DDL/DML execution function (for CREATE TABLE and INSERT during dataset upload)
+CREATE OR REPLACE FUNCTION execute_sql(query_text TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  upper_trimmed TEXT := UPPER(TRIM(query_text));
+BEGIN
+  -- Allow CREATE TABLE and INSERT INTO ds_ tables only
+  IF upper_trimmed LIKE 'CREATE TABLE%' THEN
+    EXECUTE query_text;
+  ELSIF upper_trimmed LIKE 'INSERT INTO%' AND query_text LIKE '%"ds_%' THEN
+    EXECUTE query_text;
+  ELSE
+    RAISE EXCEPTION 'Only CREATE TABLE and INSERT INTO dataset tables are allowed';
+  END IF;
+
+  RETURN '{"success": true}'::jsonb;
+END;
+$$;
+
+-- INSERT execution function (for loading data during dataset upload)
+CREATE OR REPLACE FUNCTION execute_insert(query_text TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Only allow INSERT INTO statements for ds_ tables
+  IF NOT (UPPER(TRIM(query_text)) LIKE 'INSERT INTO%') THEN
+    RAISE EXCEPTION 'Only INSERT statements are allowed';
+  END IF;
+
+  IF NOT (query_text LIKE '%"ds_%') THEN
+    RAISE EXCEPTION 'Can only insert into dataset tables (ds_*)';
+  END IF;
+
+  EXECUTE query_text;
+
+  RETURN '{"success": true}'::jsonb;
 END;
 $$;
 

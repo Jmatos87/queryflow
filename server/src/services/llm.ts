@@ -4,6 +4,16 @@ import type { ColumnSchema } from '../types/index.js'
 
 const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY })
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface ChatResponse {
+  message: string
+  sql?: string
+}
+
 export async function generateSQL(
   question: string,
   tableName: string,
@@ -47,4 +57,123 @@ User question: ${question}`
 
   // Strip markdown code fences if present
   return sql.replace(/^```(?:sql)?\n?/i, '').replace(/\n?```$/i, '').trim()
+}
+
+/** Strip SQL, JSON artifacts, and code fences from a user-facing message */
+function sanitizeMessage(msg: string): string {
+  return msg
+    // Remove everything from {"sql" or {\"sql\" to end of line or string
+    .replace(/\{["\s]*sql[\s":\\].*$/gim, '')
+    // Remove ```sql...``` blocks
+    .replace(/```(?:sql)?[\s\S]*?```/gi, '')
+    // Remove standalone SELECT...FROM statements
+    .replace(/\bSELECT\s+[\s\S]*?\bFROM\s+[\s\S]*?(?:;|$)/gi, '')
+    // Remove markdown code fences
+    .replace(/```[\s\S]*?```/g, '')
+    // Collapse excess newlines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export async function generateChatResponse(
+  question: string,
+  tableName: string,
+  schema: ColumnSchema[],
+  rowCount: number,
+  conversationHistory: ConversationMessage[] = []
+): Promise<ChatResponse> {
+  const schemaDescription = schema
+    .map(
+      (col) =>
+        `  - "${col.name}" (${col.type}${col.nullable ? ', nullable' : ''}) — sample values: ${col.sample.slice(0, 3).join(', ')}`
+    )
+    .join('\n')
+
+  const systemPrompt = `You are a data analyst assistant. You have FULL access to a PostgreSQL database and can run any SELECT query. When you include a "sql" field in your JSON response, the system executes it automatically and displays results to the user as a table or chart.
+
+NEVER say "I'm a text-based AI", "I can't analyze data", or "I can't perform operations". You CAN do all of these things by writing SQL. NEVER suggest the user run a query themselves — YOU run it by including the sql field.
+
+Dataset: "${tableName}" (${rowCount} rows)
+Columns:
+${schemaDescription}
+
+RESPONSE FORMAT — respond with ONLY valid JSON, nothing else:
+{"message": "Brief explanation of results (2-3 sentences)", "sql": "SELECT ..."}
+
+Omit the "sql" field ONLY for simple meta questions (e.g. "what columns exist?").
+For ALL analytical questions (trends, patterns, comparisons, aggregations, distributions, filtering, grouping) — ALWAYS include sql.
+
+SQL GUIDELINES:
+- PostgreSQL syntax. SELECT only.
+- Table: "${tableName}" (double-quoted). Columns: double-quoted.
+- Numeric columns are already stored as numbers — do NOT use CAST, REPLACE, or any string manipulation on them. Just use them directly (e.g. SUM("Total net sales")).
+- Text dates like "01/15/2025" or "2025-01-15": use TO_DATE("col", 'MM/DD/YYYY') or appropriate format, then use DATE_TRUNC for grouping by week/month/year.
+- LIMIT 1000 max.
+- No destructive operations (DROP, DELETE, INSERT, UPDATE, ALTER).
+
+NEVER put SQL inside the message field. NEVER use markdown code fences.`
+
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+  ]
+
+  // Add conversation history
+  for (const msg of conversationHistory) {
+    messages.push({ role: msg.role, content: msg.content })
+  }
+
+  // Add current question
+  messages.push({ role: 'user', content: question })
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages,
+    temperature: 0.3,
+    max_tokens: 2000,
+    response_format: { type: 'json_object' },
+  })
+
+  const raw = completion.choices[0]?.message?.content?.trim()
+
+  if (!raw) {
+    throw new Error('Failed to generate a response')
+  }
+
+  // Parse JSON response
+  try {
+    // Strip markdown code fences if present
+    const cleaned = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
+    const parsed = JSON.parse(cleaned) as ChatResponse
+
+    if (!parsed.message) {
+      throw new Error('Response missing message field')
+    }
+
+    // Clean SQL if present
+    if (parsed.sql) {
+      parsed.sql = parsed.sql.replace(/^```(?:sql)?\n?/i, '').replace(/\n?```$/i, '').trim()
+    }
+
+    // Sanitize the message: strip any SQL or JSON the LLM may have leaked
+    parsed.message = sanitizeMessage(parsed.message)
+
+    if (!parsed.message) {
+      parsed.message = 'Here are the results.'
+    }
+
+    return parsed
+  } catch {
+    // If full JSON parse fails, try to extract fields with regex
+    const sqlMatch = raw.match(/"sql"\s*:\s*"((?:[^"\\]|\\.)*)/)
+    const messageMatch = raw.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)/)
+
+    const sql = sqlMatch ? sqlMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') : undefined
+    const message = sanitizeMessage(
+      messageMatch
+        ? messageMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n')
+        : raw
+    )
+
+    return { message: message || 'Here are the results.', sql }
+  }
 }

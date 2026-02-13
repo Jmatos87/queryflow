@@ -119,10 +119,57 @@ cd server && npm run test:coverage  # Run tests with coverage report
 - Rate limiting behavior
 
 ## Architecture Principles
+- **Conversation-first UX** — primary interface is a persistent chat per dataset; LLM reasons about data AND generates SQL as needed
 - **MCP as LLM abstraction** — all LLM communication goes through MCP tool definitions for standardization and extensibility
 - **Supabase as unified backend** — database, file storage, and auth in one service
 - **Session-first privacy** — data is session-only by default, no persistent storage unless opted in
 - **Input sanitization** — all user inputs and generated SQL must be validated before execution
+
+## Key File Inventory
+
+### Frontend Components
+- `client/src/App.tsx` — Root: QueryClientProvider → AppShell → MainContent (ChatPanel or FileUpload) + ResultsDrawer
+- `client/src/components/AppShell.tsx` — Layout: Header + Sidebar + main content
+- `client/src/components/ChatPanel.tsx` — **Main chat interface**: message bubbles, typing indicator, input bar, welcome message
+- `client/src/components/ResultsDrawer.tsx` — Right-side Sheet with DataTable + ChartView tabs, triggered from chat "View Results"
+- `client/src/components/DataTable.tsx` — Sortable table component (max 100 rows)
+- `client/src/components/ChartView.tsx` — Auto-detecting chart (Bar/Line/Pie) via Recharts
+- `client/src/components/FileUpload.tsx` — Drag-and-drop file upload (.csv/.json/.sql, 10MB max)
+- `client/src/components/QueryPanel.tsx` — Legacy query panel (replaced by ChatPanel)
+- `client/src/components/QueryInput.tsx` — Legacy query input (functionality now in ChatPanel)
+- `client/src/components/ResultsPanel.tsx` — Legacy results display (replaced by ResultsDrawer)
+
+### Frontend Stores (Zustand)
+- `client/src/stores/chatStore.ts` — Chat messages per dataset (`messagesByDataset`, `addMessage`, `getMessages`)
+- `client/src/stores/datasetStore.ts` — Active dataset selection
+- `client/src/stores/queryStore.ts` — Legacy query state (lastQuery, isQuerying)
+- `client/src/stores/uiStore.ts` — Sidebar, active tab, drawer open/close + drawerMessage
+
+### Frontend Hooks
+- `client/src/hooks/useChat.ts` — Sends messages via chat API, manages loading state, adds messages to chatStore
+- `client/src/hooks/useNLQuery.ts` — Legacy: mutation for submitQuery (SQL-only mode)
+- `client/src/hooks/useUpload.ts` — File upload mutation
+- `client/src/hooks/useDatasets.ts` — Fetch datasets query
+- `client/src/hooks/useSessionId.ts` — Session UUID from localStorage
+
+### Frontend Services
+- `client/src/services/api.ts` — Base fetch utility (apiFetch, apiUpload)
+- `client/src/services/queries.ts` — `submitChat()` (conversational) + legacy `submitQuery()` (SQL-only)
+- `client/src/services/datasets.ts` — CRUD for datasets
+
+### Backend Routes
+- `server/src/routes/query.ts` — `POST /` (legacy SQL-only) + `POST /chat` (conversational with history)
+- `server/src/routes/upload.ts` — File upload + parse + create table
+- `server/src/routes/datasets.ts` — Dataset CRUD
+- `server/src/routes/results.ts` — Query history
+
+### Backend Services
+- `server/src/services/llm.ts` — `generateSQL()` (legacy) + `generateChatResponse()` (conversational: returns `{ message, sql? }`)
+- `server/src/services/sqlValidator.ts` — SELECT-only validation, dangerous keyword blocking
+- `server/src/services/queryExecutor.ts` — Supabase RPC execution
+- `server/src/services/fileParser.ts` — CSV/JSON/SQL parsing
+- `server/src/services/schemaAnalyzer.ts` — Column type inference
+- `server/src/services/dataLoader.ts` — Table creation + batch data loading
 
 ## Project Structure
 ```
@@ -153,7 +200,7 @@ queryflow/
 ```
 
 ## Current Phase
-Phase 2: Enhanced Queries (in progress). MVP features (CSV upload, basic NL-to-SQL, table visualization, query history) are complete. Working on JSON support, chart visualizations, follow-up questions, MCP streaming, responsive mobile design, and comprehensive test coverage.
+Phase 3: Conversation-First Redesign (in progress). Chat-based interface replaces the query panel. LLM can reason about data conversationally and generate SQL on demand. Results display in a right-side drawer.
 
 ## Git Workflow
 - Branch naming: `feature/<name>`, `fix/<name>`, `refactor/<name>`

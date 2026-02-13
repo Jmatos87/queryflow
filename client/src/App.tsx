@@ -3,7 +3,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AppShell } from '@/components/AppShell'
 import { FileUpload } from '@/components/FileUpload'
-import { QueryPanel } from '@/components/QueryPanel'
+import { ChatPanel } from '@/components/ChatPanel'
+import { ResultsDrawer } from '@/components/ResultsDrawer'
 import { useDatasetStore } from '@/stores/datasetStore'
 
 const queryClient = new QueryClient({
@@ -18,20 +19,16 @@ const queryClient = new QueryClient({
 function MainContent() {
   const activeDataset = useDatasetStore((s) => s.activeDataset)
 
-  return (
-    <div className="p-4 sm:p-6">
-      {activeDataset ? (
-        <QueryPanel />
-      ) : (
-        <div className="flex flex-col items-center justify-center py-12 sm:py-20">
-          <h2 className="mb-2 text-2xl font-semibold">Welcome to QueryFlow</h2>
-          <p className="mb-8 text-muted-foreground text-center max-w-md">
-            Upload a CSV, JSON, or SQL file and ask questions about your data in
-            plain English.
-          </p>
-          <FileUpload />
-        </div>
-      )}
+  return activeDataset ? (
+    <ChatPanel />
+  ) : (
+    <div className="flex flex-col items-center justify-center py-12 sm:py-20 p-4 sm:p-6">
+      <h2 className="mb-2 text-2xl font-semibold">Welcome to QueryFlow</h2>
+      <p className="mb-8 text-muted-foreground text-center max-w-md">
+        Upload a CSV, JSON, or SQL file and ask questions about your data in
+        plain English.
+      </p>
+      <FileUpload />
     </div>
   )
 }
@@ -43,6 +40,7 @@ export function App() {
         <AppShell>
           <MainContent />
         </AppShell>
+        <ResultsDrawer />
         <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>

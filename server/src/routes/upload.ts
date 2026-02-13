@@ -68,8 +68,11 @@ router.post('/', uploadLimiter, upload.single('file'), async (req, res, next) =>
     const schema = analyzeSchema(parsed)
     const tableName = generateTableName()
 
+    console.log(`[upload] Creating table ${tableName} with ${schema.length} columns`)
     await createTable(tableName, schema)
+    console.log(`[upload] Table created, loading ${parsed.rows.length} rows`)
     const rowCount = await loadData(tableName, parsed, schema)
+    console.log(`[upload] Loaded ${rowCount} rows`)
 
     const datasetName = file.originalname.replace(/\.[^/.]+$/, '')
 

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabaseAdmin } from '../config/supabase.js'
-import { generateSQL } from '../services/llm.js'
+import { generateSQL, generateChatResponse } from '../services/llm.js'
 import { validateSQL } from '../services/sqlValidator.js'
 import { executeQuery } from '../services/queryExecutor.js'
 import { queryLimiter } from '../middleware/rateLimiter.js'
@@ -8,6 +8,7 @@ import { AppError } from '../middleware/errorHandler.js'
 
 const router = Router()
 
+// Legacy SQL-only query endpoint
 router.post('/', queryLimiter, async (req, res, next) => {
   try {
     const { datasetId, question, sessionId } = req.body
@@ -62,6 +63,96 @@ router.post('/', queryLimiter, async (req, res, next) => {
       results: result.rows,
       rowCount: result.rowCount,
       executionTimeMs: result.executionTimeMs,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Conversational chat endpoint
+router.post('/chat', queryLimiter, async (req, res, next) => {
+  try {
+    const { datasetId, question, sessionId, conversationHistory } = req.body
+
+    if (!datasetId) {
+      throw new AppError(400, 'Dataset ID is required')
+    }
+
+    if (!question || !question.trim()) {
+      throw new AppError(400, 'Question is required')
+    }
+
+    if (!sessionId) {
+      throw new AppError(400, 'Session ID is required')
+    }
+
+    const { data: dataset, error: datasetError } = await supabaseAdmin
+      .from('datasets')
+      .select('*')
+      .eq('id', datasetId)
+      .single()
+
+    if (datasetError || !dataset) {
+      throw new AppError(404, 'Dataset not found')
+    }
+
+    // Get LLM response with conversation context
+    const chatResponse = await generateChatResponse(
+      question,
+      dataset.table_name,
+      dataset.schema,
+      dataset.row_count,
+      conversationHistory ?? []
+    )
+
+    console.log('[chat] LLM response:', JSON.stringify(chatResponse).slice(0, 500))
+
+    let results: Record<string, unknown>[] | undefined
+    let rowCount: number | undefined
+    let executionTimeMs: number | undefined
+    let validatedSQL: string | undefined
+
+    // If the LLM generated SQL, validate and execute it
+    if (chatResponse.sql) {
+      try {
+        validatedSQL = validateSQL(chatResponse.sql, dataset.table_name)
+        const result = await executeQuery(validatedSQL)
+        results = result.rows
+        rowCount = result.rowCount
+        executionTimeMs = result.executionTimeMs
+      } catch (sqlError) {
+        console.error('[chat] SQL execution failed:', sqlError instanceof Error ? sqlError.message : sqlError)
+        console.error('[chat] Failed SQL:', chatResponse.sql)
+        chatResponse.message += '\n\n(I tried to run a query but it failed. Could you rephrase your question?)'
+        chatResponse.sql = undefined
+      }
+    }
+
+    // Save to query history if SQL was executed
+    if (validatedSQL && results) {
+      const { error: saveError } = await supabaseAdmin
+        .from('query_history')
+        .insert({
+          dataset_id: datasetId,
+          natural_language: question,
+          generated_sql: validatedSQL,
+          result: results,
+          row_count: rowCount ?? 0,
+          execution_time_ms: executionTimeMs ?? 0,
+          session_id: sessionId,
+        })
+
+      if (saveError) {
+        console.error('Failed to save query history:', saveError)
+      }
+    }
+
+    res.json({
+      message: chatResponse.message,
+      sql: validatedSQL,
+      results,
+      rowCount,
+      executionTimeMs,
     })
   } catch (err) {
     next(err)
