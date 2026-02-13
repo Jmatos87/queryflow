@@ -13,8 +13,8 @@ describe('export utils', () => {
     mockRevokeObjectURL = vi.fn()
     mockClick = vi.fn()
 
-    URL.createObjectURL = mockCreateObjectURL
-    URL.revokeObjectURL = mockRevokeObjectURL
+    URL.createObjectURL = mockCreateObjectURL as typeof URL.createObjectURL
+    URL.revokeObjectURL = mockRevokeObjectURL as typeof URL.revokeObjectURL
 
     vi.spyOn(document, 'createElement').mockReturnValue({
       set href(v: string) { capturedHref = v },
