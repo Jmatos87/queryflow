@@ -146,14 +146,14 @@ function SessionItem({
       }`}
     >
       <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <p className="text-sm font-medium truncate">{session.name}</p>
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground truncate flex-1 min-w-0">
             {formatRelativeTime(session.createdAt)}
           </p>
           <button
-            className="text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+            className="shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()
