@@ -102,6 +102,15 @@
   }
 }
 
+/* Recharts SVG text elements don't inherit CSS color — force theme-aware fill */
+.recharts-text,
+.recharts-label {
+  fill: hsl(var(--foreground));
+}
+.recharts-legend-item-text {
+  color: hsl(var(--foreground)) !important;
+}
+
 @utility container {
   margin-inline: auto;
   padding-inline: 1rem;

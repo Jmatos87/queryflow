@@ -35,6 +35,15 @@ export function ChartView({ data, chartType }: ChartViewProps) {
   }
 
   const type = chartType || config.type
+  const tooltipProps = {
+    contentStyle: {
+      backgroundColor: 'hsl(var(--popover))',
+      border: '1px solid hsl(var(--border))',
+      borderRadius: '6px',
+    } as React.CSSProperties,
+    labelStyle: { color: 'hsl(var(--popover-foreground))' } as React.CSSProperties,
+    itemStyle: { color: 'hsl(var(--popover-foreground))' } as React.CSSProperties,
+  }
   const chartData = data.map((row) => {
     const item: Record<string, unknown> = {
       [config.labelKey]: formatChartLabel(row[config.labelKey]),
@@ -63,7 +72,7 @@ export function ChartView({ data, chartType }: ChartViewProps) {
                 <Cell key={i} fill={getChartColor(i)} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
           </PieChart>
         ) : type === 'line' ? (
@@ -77,7 +86,7 @@ export function ChartView({ data, chartType }: ChartViewProps) {
               height={60}
             />
             <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
             {config.valueKeys.map((key, i) => (
               <Line
@@ -101,7 +110,7 @@ export function ChartView({ data, chartType }: ChartViewProps) {
               height={60}
             />
             <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
             {config.valueKeys.map((key, i) => (
               <Bar key={key} dataKey={key} fill={getChartColor(i)} />
